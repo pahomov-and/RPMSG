@@ -9,9 +9,13 @@ pthread_t thread;
 bool isRun;
 
 void *loop(void*p) {
-    RPMSG_Start(&rpmsg, "/dev/RPMSG0");
 
     isRun = true;
+    while(RPMSG_Start(&rpmsg, "/dev/RPMSG0") < 0 && isRun) {
+        printf("Not open: /dev/RPMSG0\n");
+        sleep(1);
+    }
+
     while (isRun) {
         if (RPMSG_GetLine(&rpmsg, &buff[0]) > 0) {
             printf("-> %s\n", &buff[0]);
@@ -19,11 +23,16 @@ void *loop(void*p) {
     }
 }
 
+void intHandler(int dummy) {
+    isRun = false;
+}
+
 int main() {
     int status_addr;
     int status;
     printf("Hello, World!\n");
 
+    signal(SIGINT, intHandler);
 
     if (pthread_create(&thread, NULL, loop, (void*) NULL) != 0) {
         printf("Error");
